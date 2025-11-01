@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple Blog (Express + Vanilla JS)</title>
+    <style>
+      :root {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      body {
+        max-width: 840px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      a {
+        text-decoration: none;
+      }
+      .post-card {
+        padding: 16px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+      .muted {
+        color: #666;
+        font-size: 14px;
+      }
+      .back {
+        margin: 16px 0;
+        display: inline-block;
+      }
+      pre {
+        white-space: pre-wrap;
+      }
+      nav {
+        margin-bottom: 20px;
+      }
+      .tag {
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid #ddd;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><a href="#/">Simple Blog</a></h1>
+      <nav><span class="tag">API: /api/posts</span></nav>
+    </header>
+
+    <main id="app">Đang tải...</main>
+
+    <script>
+      const app = document.getElementById("app");
+
+      async function fetchJSON(url) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Fetch failed: " + res.status);
+        return res.json();
+      }
+
+      function formatDate(d) {
+        return d ? new Date(d).toLocaleDateString("vi-VN") : "";
+      }
+
+      function renderList(items) {
+        app.innerHTML = "";
+        items.forEach((p) => {
+          const el = document.createElement("article");
+          el.className = "post-card";
+          el.innerHTML = `
+            <h2><a href="#/post/${p.slug}">${p.title}</a></h2>
+            <div class="muted">${formatDate(p.date)}</div>
+            <p>${p.excerpt}</p>
+            <a href="#/post/${p.slug}">Đọc tiếp →</a>
+          `;
+          app.appendChild(el);
+        });
+      }
+
+      function renderPost(p) {
+        app.innerHTML = `
+          <a class="back" href="#/">← Về danh sách</a>
+          <h2>${p.title}</h2>
+          <div class="muted">${formatDate(p.date)} · id=${p.id} · slug=${
+          p.slug
+        }</div>
+          <pre>${p.body ?? p.content ?? ""}</pre>
+        `;
+      }
+
+      async function router() {
+        const hash = location.hash || "#/";
+        const [, route, param] = hash.split("/"); // ["#", "", ""] or ["#", "post", "slug"]
+        try {
+          if (!route) {
+            const list = await fetchJSON("/api/posts");
+            renderList(list);
+          } else if (route === "post" && param) {
+            const post = await fetchJSON(
+              "/api/posts/" + encodeURIComponent(param)
+            );
+            renderPost(post);
+          } else {
+            app.textContent = "404 - Không tìm thấy trang";
+          }
+        } catch (err) {
+          app.textContent = "Lỗi: " + err.message;
+        }
+      }
+
+      window.addEventListener("hashchange", router);
+      router();
+    </script>
+  </body>
+</html>
